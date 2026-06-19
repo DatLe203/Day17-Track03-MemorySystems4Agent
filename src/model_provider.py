@@ -25,8 +25,20 @@ class ProviderConfig:
 
 def normalize_provider(value: str) -> str:
     """Student TODO: map aliases like `anthorpic` -> `anthropic`."""
-
-    raise NotImplementedError
+    val = value.strip().lower()
+    if val in ("google", "gemini", "google-genai"):
+        return "gemini"
+    if val in ("openai", "open-ai"):
+        return "openai"
+    if val in ("anthropic", "anthorpic"):
+        return "anthropic"
+    if val in ("ollama", "olama"):
+        return "ollama"
+    if val in ("openrouter", "open-router"):
+        return "openrouter"
+    if val in ("custom", "openai-compatible"):
+        return "custom"
+    return val
 
 
 def build_chat_model(config: ProviderConfig):
@@ -40,5 +52,56 @@ def build_chat_model(config: ProviderConfig):
     - `ollama` -> `ChatOllama`
     - `openrouter` -> `ChatOpenRouter`
     """
+    provider = normalize_provider(config.provider)
+    if provider == "openai":
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(
+            model=config.model_name,
+            temperature=config.temperature,
+            api_key=config.api_key
+        )
+    elif provider == "custom":
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(
+            model=config.model_name,
+            temperature=config.temperature,
+            api_key=config.api_key,
+            base_url=config.base_url
+        )
+    elif provider == "gemini":
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        import os
+        api_key = config.api_key or os.environ.get("GEMINI_API_KEY")
+        return ChatGoogleGenerativeAI(
+            model=config.model_name,
+            temperature=config.temperature,
+            google_api_key=api_key
+        )
+    elif provider == "anthropic":
+        from langchain_anthropic import ChatAnthropic
+        return ChatAnthropic(
+            model=config.model_name,
+            temperature=config.temperature,
+            api_key=config.api_key
+        )
+    elif provider == "ollama":
+        from langchain_ollama import ChatOllama
+        return ChatOllama(
+            model=config.model_name,
+            temperature=config.temperature,
+            base_url=config.base_url
+        )
+    elif provider == "openrouter":
+        from langchain_openai import ChatOpenAI
+        import os
+        api_key = config.api_key or os.environ.get("OPENROUTER_API_KEY")
+        base_url = config.base_url or "https://openrouter.ai/api/v1"
+        return ChatOpenAI(
+            model=config.model_name,
+            temperature=config.temperature,
+            api_key=api_key,
+            base_url=base_url
+        )
+    else:
+        raise ValueError(f"Unsupported provider: {config.provider}")
 
-    raise NotImplementedError
